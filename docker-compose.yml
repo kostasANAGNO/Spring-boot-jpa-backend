@@ -1,0 +1,21 @@
+# Local development database. Reset it (and re-run the Flyway baseline) with: docker compose down -v
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: his-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-his}
+      POSTGRES_USER: ${POSTGRES_USER:-his}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-his}
+    ports:
+      - "5432:5432"
+    volumes:
+      - his-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-his} -d ${POSTGRES_DB:-his}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  his-pgdata:

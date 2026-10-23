@@ -1,0 +1,28 @@
+# Build output
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDEs
+.idea/
+*.iml
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+.sts4/
+*.swp
+.DS_Store
+
+# Secrets / local config
+.env
+.env.*
+!.env.example
+application-secret*.yml
+*.pem
+*.key
+
+# Logs
+*.log
+logs/
