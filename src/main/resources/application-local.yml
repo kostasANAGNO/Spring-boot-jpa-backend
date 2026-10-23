@@ -1,0 +1,23 @@
+# Local development ONLY. Everything secret-looking here is a dev default, never use it elsewhere.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/his}
+    username: ${DB_USERNAME:his}
+    password: ${DB_PASSWORD:his}   # DEV ONLY
+  jpa:
+    show-sql: false
+
+app:
+  jwt:
+    # DEV ONLY signing key (>= 32 bytes). Override with JWT_SECRET anywhere else.
+    secret: ${JWT_SECRET:dev-only-secret-change-me-dev-only-secret-change-me}
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+logging:
+  level:
+    com.kostasanagno.his: DEBUG
