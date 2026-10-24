@@ -34,6 +34,18 @@ or `*Impl` classes; use `@Slf4j` for logging.
 * Mappers: `@Mapper(config = CentralMapperConfig.class)` (Spring component model, **unmapped target = compile error**,
   builders disabled). Explicitly `@Mapping(ignore = true)` id/audit/server-managed fields.
 
+## Lookup tables & links between modules
+
+* Small lookup tables (e.g. `Specialty`) extend `IdentifiedEntity` (id only) instead of `BaseEntity`, are seeded in `V1`,
+  and are exposed read-only (`GET` list).
+* Reference other modules through `@ManyToOne(fetch = LAZY)` entities, but accept only the id in request DTOs
+  (`specialtyId`, `userId`) and return a nested `{id, name}` response object (or just the id for optional links). The
+  service resolves the link (404 if missing) and mapper `@Mapping(ignore = true)`s it.
+* Avoid N+1 on list endpoints: put `@EntityGraph(attributePaths = ...)` on the repository `findAll(Specification, Pageable)`.
+* Uniqueness checks (license number, user link, national ID) look at all rows incl. soft-deleted ones.
+* A request that is well-formed but breaks a domain rule throws `BusinessRuleException` (400).
+* Search criteria with an `active` flag default to active-only; `active=false` explicitly lists soft-deleted rows.
+
 ## Errors
 
 Throw `ResourceNotFoundException` (404) / `DuplicateResourceException` (409) from services. `GlobalExceptionHandler`

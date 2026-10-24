@@ -69,6 +69,14 @@ curl -s -X POST localhost:8080/api/auth/register -H "Authorization: Bearer $TOKE
 | `POST /api/auth/register` | ADMIN |
 | `POST/GET/PUT /api/patients[/{id}]` | ADMIN, DOCTOR, NURSE, RECEPTIONIST |
 | `DELETE /api/patients/{id}` (soft delete) | ADMIN |
+| `GET /api/specialties` | ADMIN, DOCTOR, NURSE, RECEPTIONIST |
+| `GET /api/doctors`, `GET /api/doctors/{id}` | ADMIN, DOCTOR, NURSE, RECEPTIONIST |
+| `GET /api/doctors/me` (profile linked to the logged-in user) | DOCTOR |
+| `POST /api/doctors`, `PUT /api/doctors/{id}`, `DELETE /api/doctors/{id}` (soft delete) | ADMIN |
+
+Doctor search filters: `name`, `licenseNumber`, `specialtyId`, `active` (omitted = active doctors only; `active=false`
+lists soft-deleted ones). A doctor can optionally be linked to a login account via `userId` (must have the DOCTOR role
+and not be linked to another doctor). Specialties are a seeded lookup table (see `V1`).
 
 Errors always use one JSON shape: `timestamp`, `status`, `error`, `message`, `path` and (for 400s) `validationErrors[{field, message}]`.
 
@@ -86,6 +94,9 @@ Their national ID stays reserved (it is unique across all rows).
 * **After the first real deployment** migrations become strictly incremental and immutable: never edit `V1`/`V2` again,
   add `V3__...sql`, `V4__...sql`, ...
 * The migration must always match the entities, otherwise startup fails validation.
+
+> **After pulling schema changes** (e.g. the Doctor/Specialty tables added to `V1`) reset the local DB:
+> `docker compose down -v && docker compose up -d --wait`
 
 ## Build & test
 
