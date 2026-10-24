@@ -1,4 +1,4 @@
-# CLAUDE.md – conventions for the HIS backend
+# Project conventions – HIS backend
 
 Spring Boot 3.5 / Java 21 / Maven / PostgreSQL. Base package `com.kostasanagno.his`. The **Patient** module is the
 reference implementation: when adding Doctor, Appointment, ... copy its structure file by file.
@@ -67,5 +67,5 @@ turns everything into `ApiError`; security 401/403 use the same shape. A new exc
 
 ## Git
 
-Small conventional commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`). Do not add `Co-Authored-By` trailers or any
-mention of Claude as author. Never commit secrets, `.env` files or `target/`.
+Small conventional commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`). Do not add `Co-Authored-By` trailers; commits
+carry only the repository owner's identity. Never commit secrets, `.env` files or `target/`.

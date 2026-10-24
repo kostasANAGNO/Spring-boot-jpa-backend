@@ -98,4 +98,4 @@ test that boots the app on PostgreSQL – **Docker must be running**.
 
 ## Project layout
 
-See [CLAUDE.md](CLAUDE.md) for the package structure and conventions to follow when adding modules.
+See [docs/CONVENTIONS.md](docs/CONVENTIONS.md) for the package structure and conventions to follow when adding modules.
