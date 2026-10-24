@@ -125,6 +125,91 @@ class HisApplicationIntegrationTest {
     }
 
     @Test
+    void doctorCanBeCreatedLinkedSearchedAndSoftDeleted() throws Exception {
+        String admin = login("admin", "Admin123!");
+        String auth = "Bearer " + admin;
+
+        // seeded specialties
+        String specialties = mockMvc.perform(get("/api/specialties").header("Authorization", auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(10))
+                .andReturn().getResponse().getContentAsString();
+        long cardiologyId = objectMapper.readTree(specialties).get(0).get("id").asLong();
+        assertThat(objectMapper.readTree(specialties).get(0).get("name").asText()).isEqualTo("Cardiology");
+
+        // a login account with the DOCTOR role to link
+        String userJson = mockMvc.perform(post("/api/auth/register").header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"dr.house","email":"house@his.local","password":"Sup3rSecret!",
+                                 "fullName":"Gregory House","roles":["DOCTOR"]}"""))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long userId = objectMapper.readTree(userJson).get("id").asLong();
+
+        String body = """
+                {"firstName":"Gregory","lastName":"House","licenseNumber":"MD-1001","specialtyId":%d,"userId":%d}"""
+                .formatted(cardiologyId, userId);
+        String created = mockMvc.perform(post("/api/doctors").header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.specialty.name").value("Cardiology"))
+                .andExpect(jsonPath("$.userId").value(userId))
+                .andReturn().getResponse().getContentAsString();
+        long id = objectMapper.readTree(created).get("id").asLong();
+
+        // duplicate license, unknown specialty, user already linked
+        mockMvc.perform(post("/api/doctors").header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body.replace("\"userId\":" + userId, "\"userId\":null")))
+                .andExpect(status().isConflict());
+        mockMvc.perform(post("/api/doctors").header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body.replace("MD-1001", "MD-1002").replace("\"specialtyId\":" + cardiologyId, "\"specialtyId\":9999")))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/doctors").header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON).content(body.replace("MD-1001", "MD-1003")))
+                .andExpect(status().isConflict());
+        // the admin account has no DOCTOR role
+        mockMvc.perform(post("/api/doctors").header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body.replace("MD-1001", "MD-1004").replace("\"userId\":" + userId, "\"userId\":1")))
+                .andExpect(status().isBadRequest());
+
+        // search by name / specialty with sorting; /me for the linked doctor
+        mockMvc.perform(get("/api/doctors").param("name", "hou").param("specialtyId", String.valueOf(cardiologyId))
+                        .param("sort", "specialty.name,asc").header("Authorization", auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].licenseNumber").value("MD-1001"));
+        String doctorToken = login("dr.house", "Sup3rSecret!");
+        mockMvc.perform(get("/api/doctors/me").header("Authorization", "Bearer " + doctorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id));
+        mockMvc.perform(put("/api/doctors/1").header("Authorization", "Bearer " + doctorToken)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isForbidden());
+
+        // update
+        mockMvc.perform(put("/api/doctors/" + id).header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON).content(body.replace("Gregory", "Greg")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstName").value("Greg"));
+
+        // soft delete: hidden by default, visible with active=false, license stays reserved
+        mockMvc.perform(delete("/api/doctors/" + id).header("Authorization", auth)).andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/doctors/" + id).header("Authorization", auth)).andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/doctors/me").header("Authorization", "Bearer " + doctorToken))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/doctors").param("licenseNumber", "MD-1001").header("Authorization", auth))
+                .andExpect(jsonPath("$.totalElements").value(0));
+        mockMvc.perform(get("/api/doctors").param("active", "false").header("Authorization", auth))
+                .andExpect(jsonPath("$.totalElements").value(1));
+        mockMvc.perform(post("/api/doctors").header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON).content(body.replace("\"userId\":" + userId, "\"userId\":null")))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     void wrongPasswordIsRejectedAndAnonymousAccessBlocked() throws Exception {
         mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"admin\",\"password\":\"wrong\"}"))
